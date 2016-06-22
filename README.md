@@ -44,8 +44,8 @@ Step 3: Adding the custom set into Decked Builder
 
 Navigate back to the appdata directory for Decked Builder. Go to deckedbuilder\dbdir\dbdir-<Highest number in the directory> and open the setlist.xml file in a text editor.
 
-Before the </cardsets> tag at the end of the file, add the following line:
-<cardset name="Your Set Name"           code="IDK" releasedate="2099-01-01" block="Your Category Header"/>
+Before the `</cardsets>` tag at the end of the file, add the following line:
+`<cardset name="Your Set Name"           code="IDK" releasedate="2099-01-01" block="Your Category Header"/>`
 
 Change "Your set name" and "Your Category Header" as desired. Take note of the name you change the set name to.
 
