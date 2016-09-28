@@ -6,7 +6,6 @@ import java.io.FilenameFilter;
 import java.util.ArrayList;
 
 import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class MTGCustomCardCam {
 
@@ -43,14 +42,30 @@ public class MTGCustomCardCam {
 			// handle exception
 		}
 
+		JPanel options = new JPanel();
+
 		JPanel top = new JPanel();
 		top.setLayout(new BorderLayout());
 		extOrbs = new JButton("Extract Card Files");
 		extOrbs.addActionListener(new OrbExtractAction());
 		expSet = new JButton("Save Set");
 		expSet.addActionListener(new MakeSetAction());
-		top.add(extOrbs,BorderLayout.NORTH);
+
+		JButton openDisplay = new JButton("Open Card Display");
+		openDisplay.addActionListener(new OpenCardViewerAction());
+
+		JButton rebuilt = new JButton("Reinject custom sets");
+		rebuilt.addActionListener(new ReinsertCustomSets());
+
+		JButton hook = new JButton("Setup Card Display Hook");
+		hook.addActionListener(new InsertHook());
+
+		options.add(extOrbs);
+		options.add(openDisplay);
+		options.add(rebuilt);
+		options.add(hook);
 		top.add(expSet,BorderLayout.SOUTH);
+		top.add(options, BorderLayout.NORTH);
 
 		JPanel bottom = new JPanel();
 		bottom.setLayout(new BorderLayout());
@@ -79,6 +94,15 @@ public class MTGCustomCardCam {
 		app.setVisible(true);
 	}
 
+	public class OpenCardViewerAction implements ActionListener{
+		@Override
+		public void actionPerformed(ActionEvent arg0) {
+			try{
+				new CardWindow();
+			}catch(Exception e){}
+		}
+	}
+
 	public class MakeSetAction implements ActionListener{
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
@@ -86,26 +110,38 @@ public class MTGCustomCardCam {
 		}
 	}
 
-	public class OrbExtractAction implements ActionListener{
-
+	public class InsertHook implements ActionListener{
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
-			JFileChooser chooser = new JFileChooser(); 
 
-			try{
-				chooser.setCurrentDirectory(new java.io.File(System.getenv("LOCALAPPDATA")+"\\deckedbuilder"));
-			}catch(Exception e){
-				chooser.setCurrentDirectory(new java.io.File("."));
-			}
+			int n = JOptionPane.showConfirmDialog(  
+					null,
+					"This will overwrite any existing OrbCam_match_url value. Continue?",
+					"",
+					JOptionPane.YES_NO_OPTION);
 
-			chooser.setDialogTitle("Select DeckedBuilder's Orbs directory");
-			chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-			chooser.setAcceptAllFileFilterUsed(false);
-			if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) { 
-				new CardExtractThread(chooser.getSelectedFile()).start();
+			if(n == JOptionPane.YES_OPTION)
+			{
+				FileOperations.insertHook();
+				JOptionPane.showMessageDialog(null, "Setup complete. The card viewer will now display cardcam's output. If deckedbuilder is running, restart it to have this apply.");
 			}
 		}
+	}
 
+	public class ReinsertCustomSets implements ActionListener{
+		@Override
+		public void actionPerformed(ActionEvent arg0) {
+			FileOperations.updateSetlistFile();
+			JOptionPane.showMessageDialog(null, "Custom sets have been reinjected.");
+		}
+	}
+
+	public class OrbExtractAction implements ActionListener{
+		@Override
+		public void actionPerformed(ActionEvent arg0) {
+			File file = new File(System.getenv("LOCALAPPDATA")+"\\deckedbuilder\\orbs");
+			new CardExtractThread(file).start();
+		}
 	}
 
 	public class SetMakeThread extends Thread{
@@ -119,30 +155,31 @@ public class MTGCustomCardCam {
 			expSet.setEnabled(false);
 
 			progress.setMaximum(4);
-			
-			JFileChooser fileChooser = new JFileChooser();
-			
-			try{
-				fileChooser.setCurrentDirectory(new java.io.File(System.getenv("LOCALAPPDATA")+"\\deckedbuilder"));
-			}catch(Exception e){
-				fileChooser.setCurrentDirectory(new java.io.File("."));
-			}
-			
-			FileNameExtensionFilter filter = new FileNameExtensionFilter("Card Cam Orb", "orb");
-			fileChooser.setFileFilter(filter);
-			if (fileChooser.showSaveDialog(app) == JFileChooser.APPROVE_OPTION) {
-				File file = fileChooser.getSelectedFile();
-				
+
+			String setname = JOptionPane.showInputDialog("Enter set name");
+			String blockname = JOptionPane.showInputDialog("Enter category name");
+
+			String orbname = System.getenv("LOCALAPPDATA")+"\\deckedbuilder\\orbs\\"
+					+FileOperations.getOrbifiedName(setname)+".orb";
+
+
+			if(setname != null && blockname != null){
+
 				progress.setValue(2);
-				
+
 				ArrayList<String> m_ids = FileOperations.decklistToIds(field.getText());
-				
+
 				progress.setValue(2);
-				
-				FileOperations.writeSet(m_ids, file.getAbsolutePath().replace(".orb", "")+".orb");
-				
+
+				FileOperations.writeSet(m_ids, orbname);
+
+				FileOperations.addToCustomSetFile(setname,blockname);
+				FileOperations.updateSetlistFile();
+
 				progress.setValue(3);
-				JOptionPane.showMessageDialog(app, "Set Created.");
+				JOptionPane.showMessageDialog(null, "Set Created.");
+			}else{
+				JOptionPane.showMessageDialog(null, "Operation failed: missing set/category name");
 			}
 			progress.setValue(0);
 			extOrbs.setEnabled(true);
@@ -183,7 +220,7 @@ public class MTGCustomCardCam {
 			extOrbs.setEnabled(true);
 			expSet.setEnabled(true);
 			progress.setValue(0);
-			JOptionPane.showMessageDialog(app, "Card extraction complete.");
+			JOptionPane.showMessageDialog(null, "Card extraction complete.");
 
 		}
 	}
