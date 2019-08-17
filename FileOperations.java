@@ -1,13 +1,9 @@
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -16,6 +12,9 @@ import java.util.HashMap;
 import java.util.Scanner;
 
 import javax.swing.JOptionPane;
+
+import forohfor.scryfall.api.Card;
+import forohfor.scryfall.api.MTGCardQuery;
 
 public class FileOperations {
 
@@ -170,30 +169,16 @@ public class FileOperations {
 
 			ArrayList<String> m_ids = new ArrayList<>();
 
-			String escapedName = URLEncoder.encode(cardname, "UTF-8");
+			String query = "++!\""+cardname+"\"";
+			ArrayList<Card> cards = MTGCardQuery.search(query);
 
-			URL oracle = new URL("http://api.deckbrew.com/mtg/cards?name="+escapedName);
-
-			BufferedReader in = new BufferedReader(
-					new InputStreamReader(oracle.openStream()));
-
-			String inputLine;
-			String foundName = "";
-			while ((inputLine = in.readLine()) != null){
-				String cleanline = new String(inputLine.getBytes(),"UTF-8").trim();
-				if(cleanline.startsWith("\"name\"")){
-					int l = cleanline.length();
-					foundName = cleanline.substring(cleanline.indexOf(":")+3, l-2);
-				}else if(cleanline.startsWith("\"multiverse_id\"")){
-					if(foundName.trim().equalsIgnoreCase(cardname.trim())){
-						String num = cleanline.substring(cleanline.indexOf(":")+2,cleanline.indexOf(","));
-						if(!num.equals("0")){
-							m_ids.add(num);
-						}
-					}
+			for(Card card:cards)
+			{
+				for(Long id:card.getMultiverseIDs())
+				{
+					m_ids.add(id.toString());
 				}
 			}
-			in.close();
 
 			if(m_ids.isEmpty()){
 				JOptionPane.showMessageDialog(null, "Card not found: "+cardname);
